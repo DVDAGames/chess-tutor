@@ -1,5 +1,7 @@
 # Chess Tutor
 
+![Chess Tutor Interface](./public/chess-tutor.png)
+
 This is an open-source project to help beginner player's imrpove their understanding of chess principles and develop basic chess vision.
 
 It leverages an LLM (`openai/gpt-4o`) to analyze the position and provide feedback to the user and another LLM (`openai/gpt-3.5-turbo-instruct`) to play against the user.
