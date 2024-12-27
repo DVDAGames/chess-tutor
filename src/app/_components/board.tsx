@@ -251,7 +251,6 @@ export default function Board() {
   };
 
   const onSquareClick = (square: Square, piece?: Piece): void => {
-    console.log(square, piece, moveFrom);
     if (moveFrom === null) {
       const canMove = getMoveOptions(square);
 
