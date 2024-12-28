@@ -41,7 +41,7 @@ export default function Board() {
   const [possibleMoves, setPossibleMoves] = useState<CustomSquareStyles>({});
 
   const commitToMove = (): void => {
-    if (moveFrom && moveTo) {
+    if (playState === "moved") {
       stop();
 
       setMoveFrom(null);
@@ -50,7 +50,7 @@ export default function Board() {
       setPossibleMoves({});
       setPlayState("committed");
 
-      if (!game.isCheckmate() && !game.isDraw() && !game.isStalemate() && !game.isThreefoldRepetition()) {
+      if (!game.isCheckmate() && !game.isDraw() && !game.isStalemate() && !game.isThreefoldRepetition() && !game.isDrawByFiftyMoves()) {
         if (game.turn() === "b") {
           setComputerThinking(true);
 
@@ -96,10 +96,10 @@ export default function Board() {
 
               setGame(gameCopy);
 
-              append({
-                content: `My opponent played ${move}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
-                role: "user",
-              });
+              // append({
+              //   content: `My opponent played ${move}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
+              //   role: "user",
+              // });
             })
             .catch((error) => {
               console.error("Error:", error);
@@ -135,7 +135,12 @@ export default function Board() {
             content: `Ended by Repetition.\n\n${game.pgn({ newline: ":" }).replace("::", ": ")}`,
             role: "system",
           });
-        }
+        } else if (game.isDrawByFiftyMoves()) {
+          setGameOverState("Draw by Fifty Moves Rule");
+          append({
+            content: `Draw by Fifty Moves Rule.\n\n${game.pgn({ newline: ":" }).replace("::", ": ")}`,
+            role: "system",
+          });
       }
     }
   };
@@ -180,7 +185,6 @@ export default function Board() {
       setMoveTo(null);
       setSelectedPiece(null);
       setPossibleMoves({});
-      setPlayState("committed");
 
       return gameCopy;
     });
@@ -285,14 +289,16 @@ export default function Board() {
 
         setGame(gameCopy);
 
-        if (selectedPiece !== null && game.turn() === "w") {
-          append({
-            content: `I moved the ${convertPieceName(selectedPiece)} ${moveFrom} to ${square}.\n\n${game
-              .pgn({ newline: ":" })
-              .replace("::", ": ")}`,
-            role: "user",
-          });
-        }
+        // if (selectedPiece !== null && game.turn() === "w") {
+        //   append({
+        //     content: `I moved the ${convertPieceName(selectedPiece)} ${moveFrom} to ${square}.\n\n${game
+        //       .pgn({ newline: ":" })
+        //       .replace("::", ": ")}`,
+        //     role: "user",
+        //   });
+        // }
+
+        console.log(chess.attackers(square, "b"));
 
         setMoveFrom(null);
         setMoveTo(null);
@@ -371,7 +377,7 @@ export default function Board() {
         )}
       </div>
       <aside className="flex flex-col h-screen w-1/4">
-        <Tutor messages={messages} playState={playState} commit={commitToMove} undo={undoMove} isLoading={isLoading} />
+        <Tutor messages={messages} playState={playState} commit={commitToMove} undo={undoMove} isLoading={isLoading} position={game.fen()} />
       </aside>
     </>
   );

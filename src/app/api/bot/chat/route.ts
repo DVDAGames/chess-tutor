@@ -11,7 +11,9 @@ export async function POST(req: Request) {
   });
 
   const result = await streamText({
-    model: openai.chat("gpt-4o"),
+    model: openai.chat("gpt-4o", {
+      structuredOutputs: true,
+    }),
     system: ANALYZER_PROMPT,
     messages: [messages.at(-1)],
   });

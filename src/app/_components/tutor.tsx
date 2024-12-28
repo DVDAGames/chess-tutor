@@ -3,17 +3,19 @@ import type { Message } from "ai/react";
 import { Riple } from "react-loading-indicators";
 
 import MessageBubble from "./message";
+import Evaluation from "./evaluation";
 import type { GameState } from "../../types";
 
 export interface TutorProps {
   messages: Message[];
   playState: GameState;
   isLoading: boolean;
+  position: string;
   commit: () => void;
   undo: () => void;
 }
 
-export default function Tutor({ messages, playState, commit, undo, isLoading }: TutorProps) {
+export default function Tutor({ messages, playState, commit, undo, isLoading, position }: TutorProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const onCommit = () => {
@@ -47,6 +49,7 @@ export default function Tutor({ messages, playState, commit, undo, isLoading }: 
         </ol>
       </div>
       <div className="flex flex-row mt-5">
+        <Evaluation position={position} />
         <button disabled={playState !== "moved"} onClick={onCommit} className="p-2 bg-orange-600 mr-5 h-[40px]">
           Commit
         </button>

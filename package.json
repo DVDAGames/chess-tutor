@@ -11,7 +11,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^1.0.11",
     "ai": "^4.0.22",
-    "chess.js": "^1.0.0-beta.8",
+    "chess.js": "github:jhlywa/chess.js",
     "next": "15.1.3",
     "react": "^19.0.0",
     "react-chessboard": "^4.7.2",
