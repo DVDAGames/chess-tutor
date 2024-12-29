@@ -1,8 +1,3 @@
-/*!
- * Stockfish.js (http://github.com/nmrugg/stockfish.js)
- * License: GPL
- */
-
 /*
  * Description of the universal chess interface (UCI)  https://gist.github.com/aliostad/f4470274f39d29b788c1b09519e67372/
  */
@@ -81,7 +76,7 @@ export default class Engine {
     if (depth > 24) depth = 24;
 
     this.stockfish.postMessage(`position fen ${fen}`);
-    this.stockfish.postMessage(`go depth ${depth}`);
+    this.stockfish.postMessage(`eval`);
   }
 
   stop() {

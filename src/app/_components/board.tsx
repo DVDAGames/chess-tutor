@@ -12,8 +12,7 @@ import type { GameState } from "../../types";
 
 const chess = new Chess();
 
-// set a default PGN notation so we don't end up with default data in there
-chess.loadPgn(`[Tutoring "Current Position"]`);
+const date = new Date();
 
 export default function Board() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -40,8 +39,19 @@ export default function Board() {
   const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<CustomSquareStyles>({});
 
+  const analyzeBoard = (): void => {
+    stop();
+
+    append({
+      role: "user",
+      content: `Please analyze the current state of the game.\n\n${game
+        .pgn({ newline: ":" })
+        .replace("::", ": ")}\n\nLegal Moves: ${game.moves().join(", ")}`,
+    });
+  };
+
   const commitToMove = (): void => {
-    if (playState === "moved") {
+    if (game.turn() === "b") {
       stop();
 
       setMoveFrom(null);
@@ -50,9 +60,11 @@ export default function Board() {
       setPossibleMoves({});
       setPlayState("committed");
 
-      if (!game.isCheckmate() && !game.isDraw() && !game.isStalemate() && !game.isThreefoldRepetition() && !game.isDrawByFiftyMoves()) {
+      if (!game.isGameOver()) {
         if (game.turn() === "b") {
           setComputerThinking(true);
+
+          console.log("GENERATING FIRST MOVE");
 
           fetch("/api/bot/move", {
             method: "POST",
@@ -60,7 +72,8 @@ export default function Board() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              position: game.pgn().split("\n").at(-1),
+              position: game.pgn(),
+              legalMoves: game.moves(),
             }),
           })
             .then(async (response) => {
@@ -71,38 +84,86 @@ export default function Board() {
             .then((data) => {
               const { move } = data;
 
-              // HACK: the model often likes to use the notation `[N]... move`
-              // to denote that the move is for the Nth turn and is not the first
-              // move due to the computer playing Black
-              const formattedMove = move.split("...").at(-1);
+              console.log(move);
 
               const gameCopy = new Chess();
 
               gameCopy.loadPgn(game.pgn());
 
               // in case the model generates an illegal move
-              try {
-                gameCopy.move(formattedMove.trim());
-              } catch (e) {
-                console.error("Error:", e);
+              gameCopy.move(move);
 
-                // get random move
-                const moves = gameCopy.moves({ verbose: true });
-
-                const randomMove = moves[Math.floor(Math.random() * moves.length)];
-
-                gameCopy.move(randomMove);
-              }
+              append({
+                content: `My opponent played ${move}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
+                role: "user",
+              });
 
               setGame(gameCopy);
-
-              // append({
-              //   content: `My opponent played ${move}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
-              //   role: "user",
-              // });
             })
-            .catch((error) => {
-              console.error("Error:", error);
+            .catch((e) => {
+              console.error(e);
+
+              console.log("GENERATING SECOND MOVE");
+
+              fetch("/api/bot/move", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  position: game.pgn(),
+                  legalMoves: game.moves(),
+                }),
+              })
+                .then(async (response) => {
+                  if (response.ok) {
+                    return response.json();
+                  }
+                })
+                .then((data) => {
+                  const { move } = data;
+
+                  console.log(move);
+
+                  const gameCopy = new Chess();
+
+                  gameCopy.loadPgn(game.pgn());
+
+                  // in case the model generates an illegal move
+                  gameCopy.move(move);
+
+                  append({
+                    content: `My opponent played ${move}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
+                    role: "user",
+                  });
+
+                  setGame(gameCopy);
+                })
+                .catch((e) => {
+                  console.error(e);
+
+                  console.log("TWO ILLEGAL MOVES; GENERATING RANDOM MOVE");
+
+                  const gameCopy = new Chess();
+
+                  gameCopy.loadPgn(game.pgn());
+
+                  // get random move
+                  const moves = gameCopy.moves({ verbose: true });
+
+                  const move = moves[Math.floor(Math.random() * moves.length)];
+
+                  console.log(move);
+
+                  gameCopy.move(move);
+
+                  setGame(gameCopy);
+
+                  append({
+                    content: `My opponent played ${move.san}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
+                    role: "user",
+                  });
+                });
             })
             .finally(() => {
               setComputerThinking(false);
@@ -141,6 +202,7 @@ export default function Board() {
             content: `Draw by Fifty Moves Rule.\n\n${game.pgn({ newline: ":" }).replace("::", ": ")}`,
             role: "system",
           });
+        }
       }
     }
   };
@@ -150,8 +212,39 @@ export default function Board() {
 
     const newGame = new Chess();
 
-    // set a default PGN notation so we don't end up with default data in there
-    newGame.loadPgn(`[Tutoring "Current Position"]`);
+    // borrowed from: https://blog.mathieuacher.com/GPTsChessEloRatingLegalMoves/
+    newGame.header(
+      "Event",
+      `FIDE World Championship Match ${date.getFullYear()}`,
+      "Site",
+      "Los Angeles, USA",
+      "Date",
+      `${date.getFullYear()}.${date.getMonth() + 1 < 10 ? `0` : ``}${date.getMonth() + 1}.${
+        date.getDate() < 10 ? `0` : ``
+      }${date.getDate()}`,
+      "Round",
+      "5",
+      "White",
+      "Carlsen, Magnus",
+      "Black",
+      "Nepomniachtchi, Ian",
+      "WhiteElo",
+      "2885",
+      "WhiteTitle",
+      "GM",
+      "WhiteFideId",
+      "1503014",
+      "BlackElo",
+      "2812",
+      "BlackTitle",
+      "GM",
+      "BlackFideId",
+      "4168119",
+      "TimeControl",
+      "40/7200:20/3600:900+30",
+      "Variant",
+      "Standard"
+    );
 
     setMessages([
       {
@@ -206,7 +299,7 @@ export default function Board() {
     moves.forEach((move) => {
       newSquares[move.to] = {
         background:
-          game.get(move.to) && game.get(move.to).color !== game.get(square).color
+          game.get(move.to) && game.get(move.to)?.color !== game.get(square)?.color
             ? "radial-gradient(circle, rgba(0,0,0,.1) 85%, transparent 85%)"
             : "radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)",
         borderRadius: "50%",
@@ -223,6 +316,10 @@ export default function Board() {
   };
 
   const convertPieceName = (piece: Piece): string => {
+    if (typeof piece === "undefined") {
+      return "";
+    }
+
     const color = piece[0] === "w" ? "white" : "black";
 
     let pieceName = color;
@@ -283,22 +380,57 @@ export default function Board() {
 
         // clone game to gameCopy without losing move history
         const gameCopy = new Chess();
-        gameCopy.loadPgn(game.pgn());
+
+        if (game.moveNumber() === 1 && game.turn() === "w") {
+          // borrowed from: https://blog.mathieuacher.com/GPTsChessEloRatingLegalMoves/
+          gameCopy.header(
+            "Event",
+            `FIDE World Championship Match ${date.getFullYear()}`,
+            "Site",
+            "Los Angeles, USA",
+            "Date",
+            `${date.getFullYear()}.${date.getMonth() + 1 < 10 ? `0` : ``}${date.getMonth() + 1}.${
+              date.getDate() < 10 ? `0` : ``
+            }${date.getDate()}`,
+            "Round",
+            "5",
+            "White",
+            "Carlsen, Magnus",
+            "Black",
+            "Nepomniachtchi, Ian",
+            "WhiteElo",
+            "2885",
+            "WhiteTitle",
+            "GM",
+            "WhiteFideId",
+            "1503014",
+            "BlackElo",
+            "2812",
+            "BlackTitle",
+            "GM",
+            "BlackFideId",
+            "4168119",
+            "TimeControl",
+            "40/7200:20/3600:900+30",
+            "Variant",
+            "Standard"
+          );
+        } else {
+          gameCopy.loadPgn(game.pgn());
+        }
 
         gameCopy.move({ from: moveFrom, to: square });
 
         setGame(gameCopy);
 
-        // if (selectedPiece !== null && game.turn() === "w") {
-        //   append({
-        //     content: `I moved the ${convertPieceName(selectedPiece)} ${moveFrom} to ${square}.\n\n${game
-        //       .pgn({ newline: ":" })
-        //       .replace("::", ": ")}`,
-        //     role: "user",
-        //   });
-        // }
-
-        console.log(chess.attackers(square, "b"));
+        if (selectedPiece !== null && game.turn() === "w") {
+          append({
+            content: `I moved the ${convertPieceName(selectedPiece)} ${moveFrom} to ${square}.\n\n${game
+              .pgn({ newline: ":" })
+              .replace("::", ": ")}\n\nLegal Moves: ${game.moves().join(", ")}`,
+            role: "user",
+          });
+        }
 
         setMoveFrom(null);
         setMoveTo(null);
@@ -313,22 +445,25 @@ export default function Board() {
       stop();
 
       const pieceInfo = game.get(square);
-      const piece = (pieceInfo.color + pieceInfo.type) as Piece;
 
-      if (game.turn() === "w") {
-        setMoveFrom(square);
-        setSelectedPiece(piece);
-        setPlayState("moving");
+      if (typeof pieceInfo !== "undefined") {
+        const piece = (pieceInfo?.color + pieceInfo?.type) as Piece;
+
+        if (game.turn() === "w") {
+          setMoveFrom(square);
+          setSelectedPiece(piece);
+          setPlayState("moving");
+        }
+
+        append({
+          content: `I think ${game.turn() === "w" ? `I want to move` : `my opponent will move`} the ${convertPieceName(
+            piece
+          )} on ${square}${game.turn() === "w" ? `, but I'm not sure where I should put it` : ``}.${
+            game.history().length === 0 ? `This is my opening move.` : ``
+          }\n\n${game.pgn({ newline: ":" }).replace("::", ": ")}\n\nLegal Moves: ${game.moves().join(", ")}`,
+          role: "user",
+        });
       }
-
-      append({
-        content: `I think ${game.turn() === "w" ? `I want to move` : `my opponent will move`} the ${convertPieceName(
-          piece
-        )} on ${square}${game.turn() === "w" ? `, but I'm not sure where I should put it` : ``}.${
-          game.history().length === 0 ? `This is my opening move.` : ``
-        }\n\n${game.pgn({ newline: ":" }).replace("::", ": ")}`,
-        role: "user",
-      });
     } else {
       if (game.turn() === "w") {
         setMoveFrom(null);
@@ -377,7 +512,17 @@ export default function Board() {
         )}
       </div>
       <aside className="flex flex-col h-screen w-1/4">
-        <Tutor messages={messages} playState={playState} commit={commitToMove} undo={undoMove} isLoading={isLoading} position={game.fen()} />
+        <Tutor
+          messages={messages}
+          playState={playState}
+          commit={commitToMove}
+          undo={undoMove}
+          analyze={analyzeBoard}
+          isLoading={isLoading}
+          position={game.fen()}
+          turn={game.turn()}
+          stop={stop}
+        />
       </aside>
     </>
   );
