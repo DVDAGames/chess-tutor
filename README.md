@@ -11,11 +11,12 @@ It leverages an LLM (`openai/gpt-4o`) to analyze the position and provide feedba
 
 - **Multi-LLM**: this project utilizes two LLMs, one as a coach and the other as an opponent
   - **Coach**: [`openai/gpt-4o`](https://openrouter.ai/openai/gpt-4o) because it's a pretty good all-around model
-  - **Opponent**: [`openai/gpt-3.5-turbo-instruct`](https://openrouter.ai/openai/gpt-3.5-turbo-instruct) because there's some [anecdotal evidence that it's better at playing chess](https://dynomight.net/chess/) than other models - if it doesn't provide a valid move we choose a random valid move for the Opponent
+  - **Opponent**: [`openai/gpt-3.5-turbo-instruct`](https://openrouter.ai/openai/gpt-3.5-turbo-instruct) because there's some [anecdotal evidence that it's better at playing chess](https://dynomight.net/chess/) than other models - if it doesn't provide a valid move after 4 attempts we choose a random valid move for the Opponent
 - **Advice**: the player can right click on a piece with valid moves to ask the Coach what it thinks about moving that piece
 - **Analysis**: the Coach will provide an ongoing analysis after each player and Opponent move
 - **Undo**: the player can undo and redo moves, checking the Coach's analysis and viewing the possible Opponent responses before finally committing to a move and allowing the Opponent to play
 - **View Opponent Moves**: before committing to a move, the player can click on Opponent pieces to see their possible moves, allowing them to consider the Opponent's possible responses before committing to a move - they can also right click on a piece to ask the Coach about the relative strength of that opponent move
+- **Real-time Evaluation**: the [Stockfish](https://stockfishchess.org/) evaluation of the position is displayed in real-time as you play, allowing you to see the impact that each move and opponent response has on your chances of winning
 
 ## Development Info
 
