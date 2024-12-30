@@ -1,6 +1,6 @@
 # Chess Tutor
 
-![Chess Tutor Interface](./public/chess-tutor.png)
+![Chess Tutor Interface](./public/chess-tutor-eval.png)
 
 This is an open-source project to help beginner player's imrpove their understanding of chess principles and develop basic chess vision.
 
