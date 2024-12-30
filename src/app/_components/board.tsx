@@ -1,18 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { useChat } from "ai/react";
 import { Mosaic } from "react-loading-indicators";
 import type { CustomSquareStyles, Piece, Square } from "react-chessboard/dist/chessboard/types";
 
 import Tutor from "./tutor";
-import type { GameState } from "../../types";
-
-const chess = new Chess();
-
-const date = new Date();
+import { useGameStore } from "../../lib/state/use-game-store";
 
 export default function Board() {
   const { messages, append, stop, isLoading, setMessages } = useChat({
@@ -26,20 +21,27 @@ export default function Board() {
     ],
   });
 
+  const {
+    game,
+    playState,
+    gameOver,
+    gameOverState,
+    undoMove,
+    setPlayState,
+    setGameOver,
+    setGameOverState,
+    newGame,
+    autogenerateCommentary,
+    setEvaluation,
+  } = useGameStore();
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [boardWidth, setBoardWidth] = useState(0);
-  const [playState, setPlayState] = useState<GameState>("choosing");
   const [computerThinking, setComputerThinking] = useState(false);
-  const [game, setGame] = useState(chess);
-  const [gameOver, setGameOver] = useState(false);
-  const [gameOverState, setGameOverState] = useState("");
   const [moveFrom, setMoveFrom] = useState<Square | null>(null);
   const [moveTo, setMoveTo] = useState<Square | null>(null);
   const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<CustomSquareStyles>({});
-  const [autogenerate, setAutogenerate] = useState(false);
-  const [evaluation, setEvaluation] = useState<number[]>([]);
-  const [round, setRound] = useState(1);
 
   const analyzeBoard = (): void => {
     stop();
@@ -74,6 +76,7 @@ export default function Board() {
             body: JSON.stringify({
               position: game.pgn(),
               legalMoves: game.moves(),
+              board: game.ascii(),
             }),
           })
             .then(async (response) => {
@@ -84,40 +87,33 @@ export default function Board() {
             .then(({ move }) => {
               console.log("MOVE: ", move);
 
-              const gameCopy = new Chess();
-
-              gameCopy.loadPgn(game.pgn());
-
-              // in case the model generates an illegal move
               try {
-                gameCopy.move(move);
+                game.move(move);
 
-                if (autogenerate) {
+                if (autogenerateCommentary) {
                   append({
-                    content: `My opponent played ${move}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
+                    content: `My opponent played ${move}.\n\n${game.pgn({ newline: ":" }).replace("::", ": ")}`,
                     role: "user",
                   });
                 }
               } catch (e) {
                 console.error(e);
 
-                const moves = gameCopy.moves({ verbose: true });
+                const moves = game.moves({ verbose: true });
 
                 const newMove = moves[Math.floor(Math.random() * moves.length)];
 
                 console.log("GENERATING RANDOM MOVE: ", newMove);
 
-                gameCopy.move(newMove);
+                game.move(newMove);
 
-                if (autogenerate) {
+                if (autogenerateCommentary) {
                   append({
-                    content: `My opponent played ${newMove.san}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
+                    content: `My opponent played ${newMove.san}.\n\n${game.pgn({ newline: ":" }).replace("::", ": ")}`,
                     role: "user",
                   });
                 }
               }
-
-              setGame(gameCopy);
             })
             .catch((e) => {
               console.error(e);
@@ -167,35 +163,8 @@ export default function Board() {
   const restartGame = (): void => {
     stop();
 
-    const newRound = round + 1;
-
-    const newGame = new Chess();
-
-    // borrowed from: https://blog.mathieuacher.com/GPTsChessEloRatingLegalMoves/
-    newGame.header(
-      "Event",
-      `Chess Tutoring ${date.getFullYear()}`,
-      "Site",
-      navigator.userAgent,
-      "Date",
-      `${date.getFullYear()}.${date.getMonth() + 1 < 10 ? `0` : ``}${date.getMonth() + 1}.${
-        date.getDate() < 10 ? `0` : ``
-      }${date.getDate()}`,
-      "Round",
-      `${newRound}`,
-      "White",
-      "Chess Student",
-      "Black",
-      "kaspar0v",
-      "WhiteElo",
-      "500",
-      "BlackElo",
-      "2750",
-      "BlackTitle",
-      "GM",
-      "Variant",
-      "Standard"
-    );
+    newGame();
+    setEvaluation([0.0]);
 
     setMessages([
       {
@@ -205,39 +174,21 @@ export default function Board() {
       },
     ]);
 
-    setGame(newGame);
-    setPlayState("choosing");
     setMoveFrom(null);
     setMoveTo(null);
     setSelectedPiece(null);
     setPossibleMoves({});
-    setGameOver(false);
-    setEvaluation([0.0]);
-    setRound(newRound);
   };
 
-  const toggleAutogenerate = (): void => {
-    setAutogenerate((a) => !a);
-  };
-
-  const undoMove = (): void => {
+  const undo = (): void => {
     stop();
 
-    setGame((g) => {
-      const gameCopy = new Chess();
+    undoMove();
 
-      gameCopy.loadPgn(g.pgn());
-
-      gameCopy.undo();
-
-      setPlayState("choosing");
-      setMoveFrom(null);
-      setMoveTo(null);
-      setSelectedPiece(null);
-      setPossibleMoves({});
-
-      return gameCopy;
-    });
+    setMoveFrom(null);
+    setMoveTo(null);
+    setSelectedPiece(null);
+    setPossibleMoves({});
   };
 
   const getMoveOptions = (square: Square): boolean => {
@@ -335,46 +286,11 @@ export default function Board() {
         setPlayState("moved");
         setPossibleMoves({});
 
-        // clone game to gameCopy without losing move history
-        const gameCopy = new Chess();
+        game.move({ from: moveFrom, to: square });
 
-        if (game.moveNumber() === 1 && game.turn() === "w") {
-          // borrowed from: https://blog.mathieuacher.com/GPTsChessEloRatingLegalMoves/
-          gameCopy.header(
-            "Event",
-            `Chess Tutoring ${date.getFullYear()}`,
-            "Site",
-            navigator.userAgent,
-            "Date",
-            `${date.getFullYear()}.${date.getMonth() + 1 < 10 ? `0` : ``}${date.getMonth() + 1}.${
-              date.getDate() < 10 ? `0` : ``
-            }${date.getDate()}`,
-            "Round",
-            `${round}`,
-            "White",
-            "Chess Student",
-            "Black",
-            "kaspar0v",
-            "WhiteElo",
-            "500",
-            "BlackElo",
-            "2750",
-            "BlackTitle",
-            "GM",
-            "Variant",
-            "Standard"
-          );
-        } else {
-          gameCopy.loadPgn(game.pgn());
-        }
-
-        gameCopy.move({ from: moveFrom, to: square });
-
-        setGame(gameCopy);
-
-        if (autogenerate && selectedPiece !== null && game.turn() === "w") {
+        if (autogenerateCommentary && selectedPiece !== null && game.turn() === "w") {
           append({
-            content: `I moved the ${convertPieceName(selectedPiece)} ${moveFrom} to ${square} by playing: ${gameCopy
+            content: `I moved the ${convertPieceName(selectedPiece)} ${moveFrom} to ${square} by playing: ${game
               .history()
               .at(-1)}.\n\n${game.pgn({ newline: ":" }).replace("::", ": ")}\n\nLegal Moves: ${game.moves().join(", ")}`,
             role: "user",
@@ -426,6 +342,8 @@ export default function Board() {
     if (containerRef.current) {
       setBoardWidth(containerRef.current.clientHeight);
     }
+
+    newGame();
   }, []);
 
   return (
@@ -465,16 +383,12 @@ export default function Board() {
           messages={messages}
           playState={playState}
           commit={commitToMove}
-          undo={undoMove}
+          undo={undo}
           analyze={analyzeBoard}
           isLoading={isLoading}
           position={game.fen()}
           turn={game.turn()}
           stop={stop}
-          autogenerate={autogenerate}
-          toggleAutogenerate={toggleAutogenerate}
-          evaluation={evaluation}
-          setEvaluation={setEvaluation}
         />
       </aside>
     </>

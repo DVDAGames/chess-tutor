@@ -1,32 +1,45 @@
-import { generateText } from "ai";
+import { CoreMessage, generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 
 import { OPPONENT_REASONING_PROMPT } from "../../../../lib/prompts";
 
 export async function POST(req: Request) {
-  const { position, legalMoves } = await req.json();
+  const { position, legalMoves, board } = await req.json();
 
   const openai = createOpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
 
+  const messages: CoreMessage[] = [
+    {
+      role: "user",
+      content: position,
+    },
+  ];
+
+  if (typeof legalMoves !== "undefined") {
+    messages.push({
+      role: "user",
+      content: `Legal Moves: ${legalMoves.join(", ")}`,
+    });
+  }
+
+  if (typeof board !== "undefined") {
+    messages.push({
+      role: "user",
+      content: `Board State: ${board}`,
+    });
+  }
+
   const results = await generateText({
     // there's some anectodal evidence that the "gpt-3.5-turbo-instruct" model
     // is actually pretty good at understanding chess PGN notation and playing
     // valid moves that make sense
-    model: openai.chat("gpt-4o-mini"),
+    model: openai.chat("gpt-4o"),
     system: OPPONENT_REASONING_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: position,
-      },
-      {
-        role: "user",
-        content: `Legal Moves: ${legalMoves.join(", ")}`,
-      },
-    ],
-    temperature: 0.7,
+    messages,
+    temperature: 0.57,
+    // this is slightly larger than the likely maximum tokens for a legal move
     maxTokens: 6,
   });
 
