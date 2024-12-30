@@ -6,17 +6,18 @@ import { ChartContainer } from "@mui/x-charts/ChartContainer";
 import { LinePlot } from "@mui/x-charts/LineChart";
 
 import Engine from "../../lib/engine";
+import { useGameStore } from "../../lib/state/use-game-store";
 
 export interface EvaluationProps {
   position: string;
   width?: number;
   evaluation: number[];
-  setEvaluation: React.Dispatch<React.SetStateAction<number[]>>;
 }
 
 const positionRegex = /Total evaluation\: (\-?\d+.?\d+) \([\w\s]+\)/;
 
-export default function Evaluation({ position, width, evaluation, setEvaluation }: EvaluationProps) {
+export default function Evaluation({ position, width, evaluation }: EvaluationProps) {
+  const { addEvaluation, game } = useGameStore();
   const [engine, setEngine] = useState<Engine>();
   const stockfish = useRef<Worker>(null);
 
@@ -43,11 +44,7 @@ export default function Evaluation({ position, width, evaluation, setEvaluation 
           if (data !== null) {
             const engineEvaluation = data[1];
 
-            setEvaluation((oldEvaluation) => {
-              const newEvaluations = [...oldEvaluation, Number(engineEvaluation)];
-
-              return newEvaluations;
-            });
+            addEvaluation(Number(engineEvaluation));
           }
         }
       });
@@ -61,10 +58,12 @@ export default function Evaluation({ position, width, evaluation, setEvaluation 
   }, []);
 
   useEffect(() => {
-    if (typeof engine !== "undefined" && typeof position !== "undefined") {
+    if (typeof engine !== "undefined") {
       engine.stop();
 
-      engine.evaluatePosition(position);
+      if (game.history().length > 0) {
+        engine.evaluatePosition(position);
+      }
     }
   }, [position]);
 
@@ -86,7 +85,7 @@ export default function Evaluation({ position, width, evaluation, setEvaluation 
           xAxis={[
             {
               data:
-                evaluation.length > 10 ? evaluation.map((_, index) => index) : Array.from({ length: 10 }, (_, index) => index),
+                evaluation.length > 20 ? evaluation.map((_, index) => index) : Array.from({ length: 50 }, (_, index) => index),
             },
           ]}
           yAxis={[
