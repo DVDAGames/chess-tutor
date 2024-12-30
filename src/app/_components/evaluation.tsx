@@ -10,13 +10,14 @@ import Engine from "../../lib/engine";
 export interface EvaluationProps {
   position: string;
   width?: number;
+  evaluation: number[];
+  setEvaluation: React.Dispatch<React.SetStateAction<number[]>>;
 }
 
 const positionRegex = /Total evaluation\: (\-?\d+.?\d+) \([\w\s]+\)/;
 
-export default function Evaluation({ position, width }: EvaluationProps) {
+export default function Evaluation({ position, width, evaluation, setEvaluation }: EvaluationProps) {
   const [engine, setEngine] = useState<Engine>();
-  const [evaluation, setEvaluation] = useState<number[]>([0.0]);
   const stockfish = useRef<Worker>(null);
 
   useEffect(() => {
@@ -63,7 +64,7 @@ export default function Evaluation({ position, width }: EvaluationProps) {
     if (typeof engine !== "undefined" && typeof position !== "undefined") {
       engine.stop();
 
-      engine.evaluatePosition(position, 10);
+      engine.evaluatePosition(position);
     }
   }, [position]);
 

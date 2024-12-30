@@ -12,14 +12,31 @@ export interface TutorProps {
   playState: GameState;
   isLoading: boolean;
   position: string;
+  autogenerate: boolean;
   turn: Color;
+  evaluation: number[];
   commit: () => void;
   undo: () => void;
   analyze: () => void;
   stop: () => void;
+  toggleAutogenerate: () => void;
+  setEvaluation: React.Dispatch<React.SetStateAction<number[]>>;
 }
 
-export default function Tutor({ messages, stop, commit, undo, turn, analyze, isLoading, position }: TutorProps) {
+export default function Tutor({
+  messages,
+  stop,
+  commit,
+  undo,
+  turn,
+  analyze,
+  isLoading,
+  position,
+  autogenerate,
+  toggleAutogenerate,
+  evaluation,
+  setEvaluation,
+}: TutorProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,10 +62,19 @@ export default function Tutor({ messages, stop, commit, undo, turn, analyze, isL
         </ol>
       </div>
       <div className="flex flex-col">
-        <Evaluation position={position} width={scrollRef.current?.clientWidth} />
+        <Evaluation
+          position={position}
+          width={scrollRef.current?.clientWidth}
+          evaluation={evaluation}
+          setEvaluation={setEvaluation}
+        />
         <div className="flex flex-row mt-5">
-          <button onClick={isLoading ? stop : analyze} className="p-2 bg-blue-400 mr-5 h-[40px]">
-            {isLoading ? "Stop" : "Analyze"}
+          <button
+            disabled={turn === "w"}
+            onClick={commit}
+            className={`p-2 ${turn === "w" ? `bg-slate-600` : `bg-orange-600`} h-[40px] mr-5`}
+          >
+            Commit
           </button>
           <button
             disabled={turn === "w"}
@@ -58,11 +84,14 @@ export default function Tutor({ messages, stop, commit, undo, turn, analyze, isL
             Undo
           </button>
           <button
-            disabled={turn === "w"}
-            onClick={commit}
-            className={`p-2 ${turn === "w" ? `bg-slate-600` : `bg-orange-600`} h-[40px]`}
+            disabled={autogenerate && !isLoading}
+            onClick={isLoading ? stop : analyze}
+            className={`flex items-center justify-center align-middle p-2 ${
+              autogenerate && !isLoading ? `bg-slate-600` : isLoading ? `bg-orange-600` : `bg-blue-400`
+            } h-[40px]`}
+            title={isLoading ? "Stop generating text" : "Get analysis"}
           >
-            Commit
+            {isLoading ? "Stop" : "Talk"}
           </button>
           <div className="relative w-[40px] ml-auto">
             <div className="absolute left-[50%] top-[50%] transform translate-x-[-50%] translate-y-[-50%]">
@@ -77,6 +106,12 @@ export default function Tutor({ messages, stop, commit, undo, turn, analyze, isL
               )}
             </div>
           </div>
+        </div>
+        <div className="flex flex-row mt-5">
+          <input type="checkbox" id="autogenerate" name="autogenerate" onChange={toggleAutogenerate} checked={autogenerate} />
+          <label htmlFor="autogenerate" className="ml-2">
+            Automatic Commentary
+          </label>
         </div>
       </div>
     </div>

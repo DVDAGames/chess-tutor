@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     // there's some anectodal evidence that the "gpt-3.5-turbo-instruct" model
     // is actually pretty good at understanding chess PGN notation and playing
     // valid moves that make sense
-    model: openai.chat("gpt-4o"),
+    model: openai.chat("gpt-4o-mini"),
     system: OPPONENT_REASONING_PROMPT,
     messages: [
       {

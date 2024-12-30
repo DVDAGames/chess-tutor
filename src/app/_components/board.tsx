@@ -15,9 +15,6 @@ const chess = new Chess();
 const date = new Date();
 
 export default function Board() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [boardWidth, setBoardWidth] = useState(0);
-
   const { messages, append, stop, isLoading, setMessages } = useChat({
     api: "/api/bot/chat",
     initialMessages: [
@@ -29,6 +26,8 @@ export default function Board() {
     ],
   });
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [boardWidth, setBoardWidth] = useState(0);
   const [playState, setPlayState] = useState<GameState>("choosing");
   const [computerThinking, setComputerThinking] = useState(false);
   const [game, setGame] = useState(chess);
@@ -38,6 +37,9 @@ export default function Board() {
   const [moveTo, setMoveTo] = useState<Square | null>(null);
   const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<CustomSquareStyles>({});
+  const [autogenerate, setAutogenerate] = useState(false);
+  const [evaluation, setEvaluation] = useState<number[]>([]);
+  const [round, setRound] = useState(1);
 
   const analyzeBoard = (): void => {
     stop();
@@ -90,10 +92,12 @@ export default function Board() {
               try {
                 gameCopy.move(move);
 
-                append({
-                  content: `My opponent played ${move}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
-                  role: "user",
-                });
+                if (autogenerate) {
+                  append({
+                    content: `My opponent played ${move}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
+                    role: "user",
+                  });
+                }
               } catch (e) {
                 console.error(e);
 
@@ -105,10 +109,12 @@ export default function Board() {
 
                 gameCopy.move(newMove);
 
-                append({
-                  content: `My opponent played ${newMove.san}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
-                  role: "user",
-                });
+                if (autogenerate) {
+                  append({
+                    content: `My opponent played ${newMove.san}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
+                    role: "user",
+                  });
+                }
               }
 
               setGame(gameCopy);
@@ -161,38 +167,32 @@ export default function Board() {
   const restartGame = (): void => {
     stop();
 
+    const newRound = round + 1;
+
     const newGame = new Chess();
 
     // borrowed from: https://blog.mathieuacher.com/GPTsChessEloRatingLegalMoves/
     newGame.header(
       "Event",
-      `FIDE World Championship Match ${date.getFullYear()}`,
+      `Chess Tutoring ${date.getFullYear()}`,
       "Site",
-      "Los Angeles, USA",
+      navigator.userAgent,
       "Date",
       `${date.getFullYear()}.${date.getMonth() + 1 < 10 ? `0` : ``}${date.getMonth() + 1}.${
         date.getDate() < 10 ? `0` : ``
       }${date.getDate()}`,
       "Round",
-      "5",
+      `${newRound}`,
       "White",
-      "Carlsen, Magnus",
+      "Chess Student",
       "Black",
-      "Nepomniachtchi, Ian",
+      "kaspar0v",
       "WhiteElo",
-      "2885",
-      "WhiteTitle",
-      "GM",
-      "WhiteFideId",
-      "1503014",
+      "500",
       "BlackElo",
-      "2812",
+      "2750",
       "BlackTitle",
       "GM",
-      "BlackFideId",
-      "4168119",
-      "TimeControl",
-      "40/7200:20/3600:900+30",
       "Variant",
       "Standard"
     );
@@ -212,6 +212,12 @@ export default function Board() {
     setSelectedPiece(null);
     setPossibleMoves({});
     setGameOver(false);
+    setEvaluation([0.0]);
+    setRound(newRound);
+  };
+
+  const toggleAutogenerate = (): void => {
+    setAutogenerate((a) => !a);
   };
 
   const undoMove = (): void => {
@@ -336,33 +342,25 @@ export default function Board() {
           // borrowed from: https://blog.mathieuacher.com/GPTsChessEloRatingLegalMoves/
           gameCopy.header(
             "Event",
-            `FIDE World Championship Match ${date.getFullYear()}`,
+            `Chess Tutoring ${date.getFullYear()}`,
             "Site",
-            "Los Angeles, USA",
+            navigator.userAgent,
             "Date",
             `${date.getFullYear()}.${date.getMonth() + 1 < 10 ? `0` : ``}${date.getMonth() + 1}.${
               date.getDate() < 10 ? `0` : ``
             }${date.getDate()}`,
             "Round",
-            "5",
+            `${round}`,
             "White",
-            "Carlsen, Magnus",
+            "Chess Student",
             "Black",
-            "Nepomniachtchi, Ian",
+            "kaspar0v",
             "WhiteElo",
-            "2885",
-            "WhiteTitle",
-            "GM",
-            "WhiteFideId",
-            "1503014",
+            "500",
             "BlackElo",
-            "2812",
+            "2750",
             "BlackTitle",
             "GM",
-            "BlackFideId",
-            "4168119",
-            "TimeControl",
-            "40/7200:20/3600:900+30",
             "Variant",
             "Standard"
           );
@@ -374,7 +372,7 @@ export default function Board() {
 
         setGame(gameCopy);
 
-        if (selectedPiece !== null && game.turn() === "w") {
+        if (autogenerate && selectedPiece !== null && game.turn() === "w") {
           append({
             content: `I moved the ${convertPieceName(selectedPiece)} ${moveFrom} to ${square} by playing: ${gameCopy
               .history()
@@ -473,6 +471,10 @@ export default function Board() {
           position={game.fen()}
           turn={game.turn()}
           stop={stop}
+          autogenerate={autogenerate}
+          toggleAutogenerate={toggleAutogenerate}
+          evaluation={evaluation}
+          setEvaluation={setEvaluation}
         />
       </aside>
     </>

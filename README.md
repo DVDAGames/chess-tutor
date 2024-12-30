@@ -11,7 +11,7 @@ It leverages an LLM (`openai/gpt-4o`) to analyze the position and provide feedba
 
 - **Multi-LLM**: this project utilizes two LLMs, one as a coach and the other as an opponent
   - **Coach**: [`openai/gpt-4o`](https://openrouter.ai/openai/gpt-4o) because it's a pretty good all-around model
-  - **Opponent**: [`openai/gpt-4o`](https://openrouter.ai/openai/gpt-4o) because it's a pretty good all-around model and plays pretty well when provided with the list of legal moves
+  - **Opponent**: [`openai/gpt-4o-mini`](https://openrouter.ai/openai/gpt-4o) because it's a pretty good all-around model and plays pretty well when provided with the list of legal moves
     - **Note*: previously the opponent was using [`openai/gpt-3.5-turbo-instruct`](https://openrouter.ai/openai/gpt-3.5-turbo-instruct) because there's some [anecdotal evidence that it's better at playing chess](https://dynomight.net/chess/) than other models - if it doesn't provide a valid move after 4 attempts we choose a random valid move for the Opponent
 - **Advice**: the player can right click on a piece with valid moves to ask the Coach what it thinks about moving that piece
 - **Analysis**: the Coach will provide an ongoing analysis after each player and Opponent move
@@ -25,25 +25,39 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+Clone or download the repo:
+
+```bash
+git clone git@github.com:DVDAGames/chess-tutor.git
+```
+
+Change into the project directory:
+
+```bash
+cd chess-tutor
+```
+
+Install the dependencies:
+
+```bash
+npm install
+```
+
+Copy the `.example.env` file to `.env` and add your [OpenAI API key](https://help.openai.com/en/articles/9186755-managing-your-work-in-the-api-platform-with-projects):
+
+```bash
+cp .example.env .env
+```
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser interact with the chess tutor.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
+### Learn More
 
 To learn more about Next.js, take a look at the following resources:
 
@@ -52,7 +66,7 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+### Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
