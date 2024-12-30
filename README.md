@@ -4,14 +4,15 @@
 
 This is an open-source project to help beginner player's imrpove their understanding of chess principles and develop basic chess vision.
 
-It leverages an LLM (`openai/gpt-4o`) to analyze the position and provide feedback to the user and another LLM (`openai/gpt-3.5-turbo-instruct`) to play against the user.
+It leverages an LLM (`openai/gpt-4o`) to analyze the position and provide feedback to the user and using another, separate system prompt to play against the user.
 
 
 ## Features
 
 - **Multi-LLM**: this project utilizes two LLMs, one as a coach and the other as an opponent
   - **Coach**: [`openai/gpt-4o`](https://openrouter.ai/openai/gpt-4o) because it's a pretty good all-around model
-  - **Opponent**: [`openai/gpt-3.5-turbo-instruct`](https://openrouter.ai/openai/gpt-3.5-turbo-instruct) because there's some [anecdotal evidence that it's better at playing chess](https://dynomight.net/chess/) than other models - if it doesn't provide a valid move after 4 attempts we choose a random valid move for the Opponent
+  - **Opponent**: [`openai/gpt-4o`](https://openrouter.ai/openai/gpt-4o) because it's a pretty good all-around model and plays pretty well when provided with the list of legal moves
+    - **Note*: previously the opponent was using [`openai/gpt-3.5-turbo-instruct`](https://openrouter.ai/openai/gpt-3.5-turbo-instruct) because there's some [anecdotal evidence that it's better at playing chess](https://dynomight.net/chess/) than other models - if it doesn't provide a valid move after 4 attempts we choose a random valid move for the Opponent
 - **Advice**: the player can right click on a piece with valid moves to ask the Coach what it thinks about moving that piece
 - **Analysis**: the Coach will provide an ongoing analysis after each player and Opponent move
 - **Undo**: the player can undo and redo moves, checking the Coach's analysis and viewing the possible Opponent responses before finally committing to a move and allowing the Opponent to play

@@ -64,9 +64,7 @@ export default function Board() {
         if (game.turn() === "b") {
           setComputerThinking(true);
 
-          console.log("GENERATING FIRST MOVE");
-
-          fetch("/api/bot/move", {
+          fetch("/api/bot/reason", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -81,89 +79,42 @@ export default function Board() {
                 return response.json();
               }
             })
-            .then((data) => {
-              const { move } = data;
-
-              console.log(move);
+            .then(({ move }) => {
+              console.log("MOVE: ", move);
 
               const gameCopy = new Chess();
 
               gameCopy.loadPgn(game.pgn());
 
               // in case the model generates an illegal move
-              gameCopy.move(move);
+              try {
+                gameCopy.move(move);
 
-              append({
-                content: `My opponent played ${move}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
-                role: "user",
-              });
+                append({
+                  content: `My opponent played ${move}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
+                  role: "user",
+                });
+              } catch (e) {
+                console.error(e);
+
+                const moves = gameCopy.moves({ verbose: true });
+
+                const newMove = moves[Math.floor(Math.random() * moves.length)];
+
+                console.log("GENERATING RANDOM MOVE: ", newMove);
+
+                gameCopy.move(newMove);
+
+                append({
+                  content: `My opponent played ${newMove.san}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
+                  role: "user",
+                });
+              }
 
               setGame(gameCopy);
             })
             .catch((e) => {
               console.error(e);
-
-              console.log("GENERATING SECOND MOVE");
-
-              fetch("/api/bot/move", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  position: game.pgn(),
-                  legalMoves: game.moves(),
-                }),
-              })
-                .then(async (response) => {
-                  if (response.ok) {
-                    return response.json();
-                  }
-                })
-                .then((data) => {
-                  const { move } = data;
-
-                  console.log(move);
-
-                  const gameCopy = new Chess();
-
-                  gameCopy.loadPgn(game.pgn());
-
-                  // in case the model generates an illegal move
-                  gameCopy.move(move);
-
-                  append({
-                    content: `My opponent played ${move}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
-                    role: "user",
-                  });
-
-                  setGame(gameCopy);
-                })
-                .catch((e) => {
-                  console.error(e);
-
-                  console.log("TWO ILLEGAL MOVES; GENERATING RANDOM MOVE");
-
-                  const gameCopy = new Chess();
-
-                  gameCopy.loadPgn(game.pgn());
-
-                  // get random move
-                  const moves = gameCopy.moves({ verbose: true });
-
-                  const move = moves[Math.floor(Math.random() * moves.length)];
-
-                  console.log(move);
-
-                  gameCopy.move(move);
-
-                  setGame(gameCopy);
-
-                  append({
-                    content: `My opponent played ${move.san}.\n\n${gameCopy.pgn({ newline: ":" }).replace("::", ": ")}`,
-                    role: "user",
-                  });
-                });
             })
             .finally(() => {
               setComputerThinking(false);
@@ -425,9 +376,9 @@ export default function Board() {
 
         if (selectedPiece !== null && game.turn() === "w") {
           append({
-            content: `I moved the ${convertPieceName(selectedPiece)} ${moveFrom} to ${square}.\n\n${game
-              .pgn({ newline: ":" })
-              .replace("::", ": ")}\n\nLegal Moves: ${game.moves().join(", ")}`,
+            content: `I moved the ${convertPieceName(selectedPiece)} ${moveFrom} to ${square} by playing: ${gameCopy
+              .history()
+              .at(-1)}.\n\n${game.pgn({ newline: ":" }).replace("::", ": ")}\n\nLegal Moves: ${game.moves().join(", ")}`,
             role: "user",
           });
         }
