@@ -2,13 +2,12 @@ import { CoreMessage, generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 
 import { OPPONENT_REASONING_PROMPT } from "../../../../lib/prompts";
+import { API_CONFIG } from "../../../../lib/config";
 
 export async function POST(req: Request) {
   const { position, legalMoves, board } = await req.json();
 
-  const openai = createOpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
+  const openai = createOpenAI(API_CONFIG);
 
   const messages: CoreMessage[] = [
     {

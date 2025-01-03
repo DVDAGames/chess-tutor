@@ -3,11 +3,14 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { encode, decode } from "gpt-tokenizer/model/gpt-3.5-turbo-instruct";
 
 import { OPPONENT_PROMPT } from "../../../../lib/prompts";
+import { API_CONFIG } from "../../../../lib/config";
+
+// DEPRECATED: This route is currently deprecated due to challenges
+// with gpt-3.5-turbo-instruct's ability to generate valid chess moves;
+// the /api/reason route is being used with gpt-4o instead
 
 export async function POST(req: Request) {
   const { position, legalMoves } = await req.json();
-
-  console.log(legalMoves);
 
   const lastMove = position.split(" ").at(-1);
 
@@ -25,9 +28,7 @@ export async function POST(req: Request) {
     return bias;
   }, {});
 
-  const openai = createOpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
+  const openai = createOpenAI(API_CONFIG);
 
   const results = await generateText({
     // there's some anectodal evidence that the "gpt-3.5-turbo-instruct" model

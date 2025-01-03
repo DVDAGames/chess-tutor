@@ -43,11 +43,13 @@ Install the dependencies:
 npm install
 ```
 
-Copy the `.example.env` file to `.env` and add your [OpenAI API key](https://help.openai.com/en/articles/9186755-managing-your-work-in-the-api-platform-with-projects):
+Copy the `.example.env` file to `.env` and set your [OpenAI API key](https://help.openai.com/en/articles/9186755-managing-your-work-in-the-api-platform-with-projects) as the `API_KEY` environment variable:
 
 ```bash
 cp .example.env .env
 ```
+
+**Note**: You can also set the `BASE_URL` environment variable if you want to use some other OpenAI-compatible endpoint. The tutor and opponent are currently optimized for the `openai/gpt-4o` model so you may need to tweak the prompts in `src/lib/prompts.ts` if you change the models used for the routes in the `/src/app/api/bot` directory.
 
 Run the development server:
 
@@ -56,6 +58,8 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser interact with the chess tutor.
+
+**Note**: There is currently a build warning `error TP1001 new Worker("/engine/stockfish.wasm.js") is not statically analyse-able`. Other folks have run into the same [issue with Next.js and Stockfish](https://stackoverflow.com/q/79250686/656011), but things still seem to run locally, so it's not a priority right now.
 
 ### Learn More
 

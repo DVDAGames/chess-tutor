@@ -323,9 +323,13 @@ export default function Board() {
         append({
           content: `I think ${game.turn() === "w" ? `I want to move` : `my opponent will move`} the ${convertPieceName(
             piece
-          )} on ${square}${game.turn() === "w" ? `, but I'm not sure where I should put it` : ``}.${
-            game.history().length === 0 ? `This is my opening move.` : ``
-          }\n\n${game.pgn({ newline: ":" }).replace("::", ": ")}\n\nLegal Moves: ${game.moves().join(", ")}`,
+          )} on ${square}${
+            game.turn() === "w"
+              ? `, but I'm not sure where I should put it.`
+              : `, but I'm not sure where they might place it. Does moving this piece seem likely?`
+          }${game.history().length === 0 ? ` This is my opening move.` : ``}\n\n${game
+            .pgn({ newline: ":" })
+            .replace("::", ": ")}\n\nLegal Moves for ${square}: ${game.moves({ square, piece: pieceInfo.type }).join(", ")}`,
           role: "user",
         });
       }
